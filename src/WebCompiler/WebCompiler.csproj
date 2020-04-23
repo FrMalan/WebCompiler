@@ -2,7 +2,7 @@
   <Import Project="..\common.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net46;netstandard2.0;netcoreapp2.0</TargetFrameworks>
+    <TargetFrameworks>net46;net48;netstandard2.0;netstandard2.1;netcoreapp2.0;netcoreapp3.1</TargetFrameworks>
     
     <Title>Web Compiler</Title>
     <PackageId>BuildWebCompiler</PackageId>

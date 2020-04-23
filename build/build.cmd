@@ -22,10 +22,10 @@ call npm install --quiet ^
         handlebars ^
         > nul
 
-if not exist "node_modules\node-sass\vendor\win32-ia32-48" (
+if not exist "node_modules\node-sass\vendor\win32-x64-72" (
     echo Copying node binding...
-    md "node_modules\node-sass\vendor\win32-ia32-48"
-    copy binding.node "node_modules\node-sass\vendor\win32-ia32-48"
+    md "node_modules\node-sass\vendor\win32-x64-72"
+    copy binding.node "node_modules\node-sass\vendor\win32-x64-72"
 )
 
 echo Deleting unneeded files and folders...
