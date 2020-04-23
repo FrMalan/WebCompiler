@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using WebCompiler;
 
@@ -50,9 +51,19 @@ namespace WebCompilerVsix
             if (pane == null)
             {
                 Guid guid = Guid.NewGuid();
-                IVsOutputWindow output = (IVsOutputWindow)_provider.GetService(typeof(SVsOutputWindow));
-                output.CreatePane(ref guid, _name, 1, 1);
-                output.GetPane(ref guid, out pane);
+                if (_provider != null)
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    if (_provider.GetService(typeof(SVsOutputWindow)) is IVsOutputWindow output)
+                    {
+                        output?.CreatePane(ref guid, _name, 1, 1);
+                        output?.GetPane(ref guid, out pane);
+                    }
+                    else
+                    {
+                        throw new ArgumentNullException(nameof(output));
+                    }
+                }
             }
 
             return pane != null;

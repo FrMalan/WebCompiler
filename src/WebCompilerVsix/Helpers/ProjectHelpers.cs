@@ -194,7 +194,7 @@ namespace WebCompilerVsix
         {
             try
             {
-                if (!parent.IsKind(ProjectKinds.vsProjectKindSolutionFolder) && parent.Collection == null)  // Unloaded
+                if (!parent.IsKind(EnvDteProjectKinds.vsProjectKindSolutionFolder) && parent.Collection == null)  // Unloaded
                     return Enumerable.Empty<Project>();
 
                 if (!string.IsNullOrEmpty(parent.FullName))
@@ -215,7 +215,7 @@ namespace WebCompilerVsix
         {
             if (_dte.Solution == null)
                 return false;
-
+            
             return GetAllProjects().Any();
         }
 

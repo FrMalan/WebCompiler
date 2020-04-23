@@ -22,6 +22,7 @@ namespace WebCompilerVsix
         private TableDataSource()
         {
             var compositionService = ServiceProvider.GlobalProvider.GetService(typeof(SComponentModel)) as IComponentModel;
+            if (compositionService == null) throw new ArgumentNullException(nameof(compositionService));
             compositionService.DefaultCompositionService.SatisfyImportsOnce(this);
 
             var manager = TableManagerProvider.GetTableManager(StandardTables.ErrorsTable);

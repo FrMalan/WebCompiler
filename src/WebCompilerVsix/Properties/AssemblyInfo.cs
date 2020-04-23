@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using WebCompilerVsix;
 
 [assembly: AssemblyTitle(Constants.VSIX_NAME)]
-[assembly: AssemblyDescription("Compiles LESS, Sass and CoffeeScript files directly within Visual Studio")]
+[assembly: AssemblyDescription("Compiles LESS, Sass and CoffeeScript files directly within Visual Studio (OV)")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Mads Kristensen")]
 [assembly: AssemblyProduct(Constants.VSIX_NAME)]

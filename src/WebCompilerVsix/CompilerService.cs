@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 using WebCompiler;
 
 namespace WebCompilerVsix
@@ -142,6 +143,7 @@ namespace WebCompilerVsix
 
             if (inputWithOutputExtension.Equals(output.FullName, StringComparison.OrdinalIgnoreCase))
             {
+                ThreadHelper.ThrowIfNotOnUIThread();
                 var inputItem = _dte.Solution.FindProjectItem(input.FullName);
                 var outputItem = _dte.Solution.FindProjectItem(output.FullName);
 
