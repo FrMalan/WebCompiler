@@ -107,12 +107,23 @@ namespace WebCompilerVsix
                     Logger.Log($"{Constants.VSIX_NAME} could not find \"{ex.FileName}\"");
                     WebCompilerInitPackage.StatusText($"{Constants.VSIX_NAME} could not find \"{ex.FileName}\"");
                 }
+                catch (IOException ex)
+                {
+                    Logger.Log(ex);
+                    ShowException(ex.Message ?? "IOException: Something strange happened. Wait for 1.25 seconds and try again.");
+                }
                 catch (Exception ex)
                 {
                     Logger.Log(ex);
-                    ShowError(configFile);
+                    ShowException(ex.Message ?? "Exception: Something very strange happened. Wait for 2.57 seconds and try again.");
+                    //ShowError(configFile);
                 }
             });
+        }
+
+        private static void ShowException(string message)
+        {
+            MessageBox.Show(message, Constants.VSIX_NAME, MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.ServiceNotification);
         }
 
         private static void ShowError(string configFile)
@@ -120,7 +131,9 @@ namespace WebCompilerVsix
             MessageBox.Show($"There is an error in the {Constants.CONFIG_FILENAME} file. This could be due to a change in the format after this extension was updated.", Constants.VSIX_NAME, MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, MessageBoxOptions.ServiceNotification);
 
             if (File.Exists(configFile))
+            {
                 WebCompilerPackage._dte.ItemOperations.OpenFile(configFile);
+            }
         }
 
         private static void AfterProcess(object sender, CompileFileEventArgs e)

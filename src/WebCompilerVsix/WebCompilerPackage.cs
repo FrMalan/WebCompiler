@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Threading;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using WebCompiler;
 using WebCompilerVsix.Commands;
 using IServiceProvider = Microsoft.VisualStudio.OLE.Interop.IServiceProvider;
+using Task = System.Threading.Tasks.Task;
 
 namespace WebCompilerVsix
 {
@@ -18,16 +16,15 @@ namespace WebCompilerVsix
     [InstalledProductRegistration("#110", "#112", Version, IconResourceID = 400)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.guidCompilerPackageString)]
-    [ProvideAutoLoad(UIContextGuids80.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class WebCompilerPackage : AsyncPackage
     {
-        public const string Version = "1.4.167";
+        public const string Version = "1.4.202";
         public static DTE2 _dte;
         public static Package Package;
         private SolutionEvents _solutionEvents;
         private BuildEvents _buildEvents;
 
-        protected override async System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -59,7 +56,7 @@ namespace WebCompilerVsix
 
         public static bool IsDocumentDirty(string documentPath, out IVsPersistDocData persistDocData)
         {
-            var serviceProvider = new ServiceProvider((IServiceProvider)_dte);
+            var serviceProvider = new ServiceProvider((IServiceProvider) _dte);
 
             IVsHierarchy vsHierarchy;
             uint itemId, docCookie;
@@ -77,8 +74,6 @@ namespace WebCompilerVsix
     }
 
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [ProvideAutoLoad(UIContextGuids80.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
-    [ProvideAutoLoad(UIContextGuids80.NoSolution, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class WebCompilerInitPackage : AsyncPackage
     {
         public static Dispatcher _dispatcher;
@@ -114,7 +109,7 @@ namespace WebCompilerVsix
 
         public static void StatusText(string message)
         {
-            WebCompilerInitPackage._dispatcher.BeginInvoke(new Action(() =>
+            _dispatcher.BeginInvoke(new Action(() =>
             {
                 _dte.StatusBar.Text = message;
             }), DispatcherPriority.ApplicationIdle, null);

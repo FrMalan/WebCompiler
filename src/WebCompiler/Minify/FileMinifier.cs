@@ -3,6 +3,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using Microsoft.Build.Utilities;
 using NUglify;
 
 namespace WebCompiler
@@ -15,7 +17,7 @@ namespace WebCompiler
         internal static MinificationResult MinifyFile(Config config)
         {
             FileInfo file = config.GetAbsoluteOutputFile();
-            string extension = file.Extension.ToUpperInvariant();
+            var extension = file.Extension.ToUpperInvariant();
 
             switch (extension)
             {
@@ -31,19 +33,18 @@ namespace WebCompiler
 
         private static MinificationResult MinifyJavaScript(Config config, string file)
         {
-            string content = File.ReadAllText(file);
+            var content = File.ReadAllText(file);
             var settings = JavaScriptOptions.GetSettings(config);
 
             if (config.Minify.ContainsKey("enabled") && config.Minify["enabled"].ToString().Equals("false", StringComparison.OrdinalIgnoreCase))
                 return null;
 
-
-            string minFile = GetMinFileName(file);
+            var minFile = GetMinFileName(file);
 
             var minifiedJs = Uglify.Js(content, settings);
-            string result = minifiedJs.Code;
+            var result = minifiedJs.Code;
 
-            bool containsChanges = FileHelpers.HasFileContentChanged(minFile, result);
+            var containsChanges = FileHelpers.HasFileContentChanged(minFile, result);
 
             if (!string.IsNullOrEmpty(result))
             {
@@ -51,7 +52,38 @@ namespace WebCompiler
 
                 if (containsChanges)
                 {
-                    File.WriteAllText(minFile, result, new UTF8Encoding(true));
+                    var tryCount = 0;
+                    const int maxTries = 20;
+                    while (tryCount <= maxTries)
+                    {
+                        try
+                        {
+                            File.WriteAllText(minFile, result, new UTF8Encoding(true));
+
+                            break;
+                        }
+                        catch (IOException)
+                        {
+                            tryCount++;
+                            if (tryCount > maxTries)
+                            {
+                                throw;
+                            }
+
+                            System.Threading.Tasks.Task.Delay(50).Wait();
+
+                        }
+                        catch (Exception)
+                        {
+                            tryCount++;
+                            if (tryCount > maxTries)
+                            {
+                                throw;
+                            }
+
+                            System.Threading.Tasks.Task.Delay(50).Wait();
+                        }
+                    }
                 }
 
                 OnAfterWritingMinFile(file, minFile, containsChanges);
@@ -64,7 +96,7 @@ namespace WebCompiler
 
         private static MinificationResult MinifyCss(Config config, string file)
         {
-            string content = File.ReadAllText(file);
+            var content = File.ReadAllText(file);
             var settings = CssOptions.GetSettings(config);
 
             if (config.Minify.ContainsKey("enabled") && config.Minify["enabled"].ToString().Equals("false", StringComparison.OrdinalIgnoreCase))
@@ -75,15 +107,46 @@ namespace WebCompiler
             content = Regex.Replace(content, @"[\u0000-\u0009\u000B-\u000C\u000E-\u001F]", string.Empty);
             var minifiedCss = Uglify.Css(content, settings);
 
-            string result = minifiedCss.Code;
-            string minFile = GetMinFileName(file);
-            bool containsChanges = FileHelpers.HasFileContentChanged(minFile, result);
+            var result = minifiedCss.Code;
+            var minFile = GetMinFileName(file);
+            var containsChanges = FileHelpers.HasFileContentChanged(minFile, result);
 
             OnBeforeWritingMinFile(file, minFile, containsChanges);
 
             if (containsChanges)
             {
-                File.WriteAllText(minFile, result, new UTF8Encoding(true));
+                var tryCount = 0;
+                const int maxTries = 20;
+                while (tryCount <= maxTries)
+                {
+                    try
+                    {
+                        File.WriteAllText(minFile, result, new UTF8Encoding(true));
+
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        tryCount++;
+                        if (tryCount > maxTries)
+                        {
+                            throw;
+                        }
+
+                        System.Threading.Tasks.Task.Delay(50).Wait();
+
+                    }
+                    catch (Exception)
+                    {
+                        tryCount++;
+                        if (tryCount > maxTries)
+                        {
+                            throw;
+                        }
+
+                        System.Threading.Tasks.Task.Delay(50).Wait();
+                    }
+                }
             }
 
             OnAfterWritingMinFile(file, minFile, containsChanges);
@@ -95,9 +158,9 @@ namespace WebCompiler
 
         private static string GetMinFileName(string file)
         {
-            string ext = Path.GetExtension(file);
+            var ext = Path.GetExtension(file);
 
-            string fileName = file.Substring(0, file.LastIndexOf(ext));
+            var fileName = file.Substring(0, file.LastIndexOf(ext));
             if (!fileName.EndsWith(".min"))
             {
                 fileName += ".min";
@@ -128,35 +191,23 @@ namespace WebCompiler
 
         private static void OnBeforeWritingMinFile(string file, string minFile, bool containsChanges)
         {
-            if (BeforeWritingMinFile != null)
-            {
-                BeforeWritingMinFile(null, new MinifyFileEventArgs(file, minFile, containsChanges));
-            }
+            BeforeWritingMinFile?.Invoke(null, new MinifyFileEventArgs(file, minFile, containsChanges));
         }
 
         private static void OnAfterWritingMinFile(string file, string minFile, bool containsChanges)
         {
-            if (AfterWritingMinFile != null)
-            {
-                AfterWritingMinFile(null, new MinifyFileEventArgs(file, minFile, containsChanges));
-            }
+            AfterWritingMinFile?.Invoke(null, new MinifyFileEventArgs(file, minFile, containsChanges));
         }
 
 
         private static void OnBeforeWritingGzipFile(string minFile, string gzipFile, bool containsChanges)
         {
-            if (BeforeWritingGzipFile != null)
-            {
-                BeforeWritingGzipFile(null, new MinifyFileEventArgs(minFile, gzipFile, containsChanges));
-            }
+            BeforeWritingGzipFile?.Invoke(null, new MinifyFileEventArgs(minFile, gzipFile, containsChanges));
         }
 
         private static void OnAfterWritingGzipFile(string minFile, string gzipFile, bool containsChanges)
         {
-            if (AfterWritingGzipFile != null)
-            {
-                AfterWritingGzipFile(null, new MinifyFileEventArgs(minFile, gzipFile, containsChanges));
-            }
+            AfterWritingGzipFile?.Invoke(null, new MinifyFileEventArgs(minFile, gzipFile, containsChanges));
         }
 
         /// <summary>

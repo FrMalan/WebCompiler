@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
+using System.Linq;
 using WebCompiler;
 using Microsoft.VisualStudio.Settings;
 using Microsoft.VisualStudio.Shell;
@@ -21,7 +21,7 @@ namespace WebCompilerVsix
     {
         private const string _propertyName = "ShowWatermark";
         private const double _initOpacity = 0.3D;
-        SettingsManager _settingsManager;
+        private SettingsManager _settingsManager;
 
         private static bool _isVisible, _hasLoaded;
 
@@ -36,7 +36,7 @@ namespace WebCompilerVsix
             _hasLoaded = true;
 
             _settingsManager = new ShellSettingsManager(serviceProvider);
-            SettingsStore store = _settingsManager.GetReadOnlySettingsStore(SettingsScope.UserSettings);
+            var store = _settingsManager.GetReadOnlySettingsStore(SettingsScope.UserSettings);
 
             LogoAdornment.VisibilityChanged += AdornmentVisibilityChanged;
 
@@ -45,7 +45,7 @@ namespace WebCompilerVsix
 
         private void AdornmentVisibilityChanged(object sender, bool isVisible)
         {
-            WritableSettingsStore wstore = _settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
+            var wstore = _settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
             _isVisible = isVisible;
 
             if (!wstore.CollectionExists(Constants.CONFIG_FILENAME))
@@ -59,10 +59,9 @@ namespace WebCompilerVsix
             if (!_hasLoaded)
                 LoadSettings();
 
-            ITextDocument document;
-            if (TextDocumentFactoryService.TryGetTextDocument(textView.TextDataModel.DocumentBuffer, out document))
+            if (TextDocumentFactoryService.TryGetTextDocument(textView.TextDataModel.DocumentBuffer, out var document))
             {
-                string fileName = Path.GetFileName(document.FilePath).ToLowerInvariant();
+                var fileName = Path.GetFileName(document.FilePath).ToLowerInvariant();
 
                 // Check if filename is absolute because when debugging, script files are sometimes dynamically created.
                 if (string.IsNullOrEmpty(fileName) || !Path.IsPathRooted(document.FilePath))
@@ -74,39 +73,35 @@ namespace WebCompilerVsix
 
         private void CreateAdornments(ITextDocument document, IWpfTextView textView)
         {
-            string fileName = document.FilePath;
+            var fileName = document.FilePath;
 
             if (Path.GetFileName(fileName) == Constants.CONFIG_FILENAME)
             {
-                LogoAdornment highlighter = new LogoAdornment(textView, _isVisible, _initOpacity);
+                var highlighter = new LogoAdornment(textView, _isVisible, _initOpacity);
             }
-            else if (Path.IsPathRooted(fileName))
+            else if (WebCompilerPackage._dte != null && Path.IsPathRooted(fileName))
             {
                 try
                 {
                     var item = WebCompilerPackage._dte.Solution.FindProjectItem(fileName);
 
-                    if (item == null || item.ContainingProject == null)
+                    if (item?.ContainingProject == null)
                         return;
 
-                    string configFile = item.ContainingProject.GetConfigFile();
+                    var configFile = item.ContainingProject.GetConfigFile();
 
                     if (string.IsNullOrEmpty(configFile))
                         return;
 
-                    string extension = Path.GetExtension(fileName.Replace(".map", ""));
-                    string normalizedFilePath = fileName.Replace(".map", "").Replace(".min" + extension, extension);
+                    var extension = Path.GetExtension(fileName.Replace(".map", ""));
+                    var normalizedFilePath = fileName.Replace(".map", "").Replace(".min" + extension, extension);
 
                     var configs = ConfigHandler.GetConfigs(configFile);
 
-                    foreach (Config config in configs)
+                    if (configs.Any(config => config.GetAbsoluteOutputFile().FullName.Equals(normalizedFilePath, StringComparison.OrdinalIgnoreCase)))
                     {
-                        if (config.GetAbsoluteOutputFile().FullName.Equals(normalizedFilePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            GeneratedAdornment generated = new GeneratedAdornment(textView, _isVisible, _initOpacity);
-                            textView.Properties.AddProperty("generated", true);
-                            break;
-                        }
+                        var generated = new GeneratedAdornment(textView, _isVisible, _initOpacity);
+                        textView.Properties.AddProperty("generated", true);
                     }
                 }
                 catch (Exception ex)

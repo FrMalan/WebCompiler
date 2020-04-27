@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using EnvDTE;
+using Microsoft.Internal.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using NuGet.VisualStudio;
@@ -26,8 +27,7 @@ namespace WebCompilerVsix.Commands
 
             _package = package;
 
-            OleMenuCommandService commandService = this.ServiceProvider.GetService(typeof(IMenuCommandService)) as OleMenuCommandService;
-            if (commandService != null)
+            if (ServiceProvider.GetService(typeof(IMenuCommandService)) is OleMenuCommandService commandService)
             {
                 var menuCommandID = new CommandID(PackageGuids.guidCompilerCmdSet, PackageIds.CompileOnBuild);
                 var menuItem = new OleMenuCommand(EnableCompileOnBuild, menuCommandID);
@@ -132,7 +132,7 @@ namespace WebCompilerVsix.Commands
             {
                 var question = MessageBox.Show("A NuGet package will be installed to augment the MSBuild process, but no files will be added to the project.\rThis may require an internet connection.\r\rDo you want to continue?", Constants.VSIX_NAME, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-                if (question == DialogResult.No)
+                if (question == System.Windows.Forms.DialogResult.No)
                     return;
 
                 Version version = new Version(WebCompilerPackage.Version);

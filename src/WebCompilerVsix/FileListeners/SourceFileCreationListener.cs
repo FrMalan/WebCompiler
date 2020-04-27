@@ -6,7 +6,6 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
-using WebCompiler;
 
 namespace WebCompilerVsix.Listeners
 {
@@ -45,34 +44,36 @@ namespace WebCompilerVsix.Listeners
             textView.Closed += TextviewClosed;
         }
 
-        private void TextviewClosed(object sender, EventArgs e)
+        private static void TextviewClosed(object sender, EventArgs e)
         {
-            IWpfTextView view = (IWpfTextView)sender;
+            var view = (IWpfTextView)sender;
 
             if (view != null)
                 view.Closed -= TextviewClosed;
         }
 
-        private void DocumentSaved(object sender, TextDocumentFileActionEventArgs e)
+        private static void DocumentSaved(object sender, TextDocumentFileActionEventArgs e)
         {
-            if (e.FileActionType == FileActionTypes.ContentSavedToDisk)
+            if (WebCompilerPackage._dte == null || e.FileActionType != FileActionTypes.ContentSavedToDisk)
             {
-                // Check if filename is absolute because when debugging, script files are sometimes dynamically created.
-                if (string.IsNullOrEmpty(e.FilePath) || !Path.IsPathRooted(e.FilePath))
-                    return;
+                return;
+            }
 
-                var item = WebCompilerPackage._dte.Solution.FindProjectItem(e.FilePath);
+            // Check if filename is absolute because when debugging, script files are sometimes dynamically created.
+            if (string.IsNullOrEmpty(e.FilePath) || !Path.IsPathRooted(e.FilePath))
+                return;
 
-                if (item != null && item.ContainingProject != null)
+            var item = WebCompilerPackage._dte.Solution.FindProjectItem(e.FilePath);
+
+            if (item != null && item.ContainingProject != null)
+            {
+                string configFile = item.ContainingProject.GetConfigFile();
+
+                //ErrorList.CleanErrors(e.FilePath);
+
+                if (File.Exists(configFile))
                 {
-                    string configFile = item.ContainingProject.GetConfigFile();
-
-                    //ErrorList.CleanErrors(e.FilePath);
-
-                    if (File.Exists(configFile))
-                    {
-                        CompilerService.SourceFileChanged(configFile, e.FilePath);
-                    }
+                    CompilerService.SourceFileChanged(configFile, e.FilePath);
                 }
             }
         }
