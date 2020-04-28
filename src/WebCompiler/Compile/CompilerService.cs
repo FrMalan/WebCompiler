@@ -15,7 +15,7 @@ namespace WebCompiler
         private static object _syncRoot = new object(); // Used to lock on the initialize step
 
         /// <summary>A list of allowed file extensions.</summary>
-        public static readonly string[] AllowedExtensions = new[] { ".LESS", ".SCSS", ".SASS", ".STYL", ".COFFEE", ".ICED", ".JS", ".JSX", ".ES6", ".HBS", ".HANDLEBARS" };
+        public static readonly string[] AllowedExtensions = { ".LESS", ".SCSS", ".SASS", ".STYL", ".COFFEE", ".ICED", ".JS", ".JSX", ".ES6", ".HBS", ".HANDLEBARS" };
 
         /// <summary>
         /// Test if a file type is supported by the compilers.
