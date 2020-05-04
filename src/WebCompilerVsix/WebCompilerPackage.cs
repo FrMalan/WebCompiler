@@ -16,9 +16,10 @@ namespace WebCompilerVsix
     [InstalledProductRegistration("#110", "#112", Version, IconResourceID = 400)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [Guid(PackageGuids.guidCompilerPackageString)]
+    [ProvideAutoLoad(UIContextGuids80.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class WebCompilerPackage : AsyncPackage
     {
-        public const string Version = "1.4.202";
+        public const string Version = "1.4.203";
         public static DTE2 _dte;
         public static Package Package;
         private SolutionEvents _solutionEvents;
@@ -74,6 +75,7 @@ namespace WebCompilerVsix
     }
 
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+    [ProvideAutoLoad(UIContextGuids80.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class WebCompilerInitPackage : AsyncPackage
     {
         public static Dispatcher _dispatcher;
