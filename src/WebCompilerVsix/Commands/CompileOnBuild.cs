@@ -4,11 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using EnvDTE;
-using Microsoft.Internal.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using NuGet.VisualStudio;
-using WebCompiler;
 
 namespace WebCompilerVsix.Commands
 {
@@ -38,57 +36,61 @@ namespace WebCompilerVsix.Commands
 
         private void BeforeQueryStatus(object sender, EventArgs e)
         {
-            var button = (OleMenuCommand)sender;
-            var item = ProjectHelpers.GetSelectedItems().FirstOrDefault();
-
-            if (item == null) // Project
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                var project = ProjectHelpers.GetActiveProject();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var button = (OleMenuCommand)sender;
+                var item = ProjectHelpers.GetSelectedItems().FirstOrDefault();
 
-                if (project != null)
+                if (item == null) // Project
                 {
-                    string config = project.GetConfigFile();
+                    var project = ProjectHelpers.GetActiveProject();
 
-                    if (!string.IsNullOrEmpty(config) && File.Exists(config))
+                    if (project != null)
                     {
-                        _isInstalled = IsPackageInstalled(project);
-                        _project = project;
-                        button.Checked = _isInstalled;
-                        button.Visible = true;
+                        string config = project.GetConfigFile();
 
-                        DisableUnsupportProjectType(project, button);
+                        if (!string.IsNullOrEmpty(config) && File.Exists(config))
+                        {
+                            _isInstalled = IsPackageInstalled(project);
+                            _project = project;
+                            button.Checked = _isInstalled;
+                            button.Visible = true;
 
-                        return;
+                            DisableUnsupportProjectType(project, button);
+
+                            return;
+                        }
                     }
                 }
-            }
 
-            // Config file
-            if (item == null || item.ContainingProject == null || item.Properties == null)
-            {
-                button.Visible = false;
-                return;
-            }
+                // Config file
+                if (item == null || item.ContainingProject == null || item.Properties == null)
+                {
+                    button.Visible = false;
+                    return;
+                }
 
-            bool isConfigFile = item.IsConfigFile();
+                bool isConfigFile = item.IsConfigFile();
 
-            if (!isConfigFile)
-            {
-                button.Visible = false;
-                return;
-            }
+                if (!isConfigFile)
+                {
+                    button.Visible = false;
+                    return;
+                }
 
-            if (!DisableUnsupportProjectType(item.ContainingProject, button))
-                return;
+                if (!DisableUnsupportProjectType(item.ContainingProject, button))
+                    return;
 
-            button.Visible = isConfigFile;
+                button.Visible = isConfigFile;
 
-            if (button.Visible)
-            {
-                _isInstalled = IsPackageInstalled(item.ContainingProject);
-                _project = item.ContainingProject;
-                button.Checked = _isInstalled;
-            }
+                if (button.Visible)
+                {
+                    _isInstalled = IsPackageInstalled(item.ContainingProject);
+                    _project = item.ContainingProject;
+                    button.Checked = _isInstalled;
+                }
+            });
         }
 
         private static bool DisableUnsupportProjectType(Project project, OleMenuCommand button)

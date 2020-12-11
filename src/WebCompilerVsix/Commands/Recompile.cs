@@ -32,28 +32,34 @@ namespace WebCompilerVsix.Commands
 
         private void BeforeQueryStatus(object sender, EventArgs e)
         {
-            var button = (OleMenuCommand)sender;
-            var files = ProjectHelpers.GetSelectedItemPaths();
-            button.Visible = false;
-
-            int count = files.Count();
-
-            if (count == 0) // Project
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                var project = ProjectHelpers.GetActiveProject();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                if (project == null)
-                    return;
+                var button = (OleMenuCommand) sender;
+                var files = ProjectHelpers.GetSelectedItemPaths();
+                button.Visible = false;
 
-                string config = project.GetConfigFile();
+                int count = files.Count();
 
-                if (!string.IsNullOrEmpty(config) && File.Exists(config))
-                    button.Visible = true;
-            }
-            else // config file
-            {
-                button.Visible = count == 1 && Path.GetFileName(files.FirstOrDefault() ?? "") == Constants.CONFIG_FILENAME;
-            }
+                if (count == 0) // Project
+                {
+                    var project = ProjectHelpers.GetActiveProject();
+
+                    if (project == null)
+                        return;
+
+                    string config = project.GetConfigFile();
+
+                    if (!string.IsNullOrEmpty(config) && File.Exists(config))
+                        button.Visible = true;
+                }
+                else // config file
+                {
+                    button.Visible = count == 1 &&
+                                     Path.GetFileName(files.FirstOrDefault() ?? "") == Constants.CONFIG_FILENAME;
+                }
+            });
         }
 
         public static Recompile Instance
@@ -77,18 +83,25 @@ namespace WebCompilerVsix.Commands
 
         private void UpdateSelectedConfig(object sender, EventArgs e)
         {
-            var file = ProjectHelpers.GetSelectedItemPaths().FirstOrDefault();
-
-            if (string.IsNullOrEmpty(file)) // Project
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                var project = ProjectHelpers.GetActiveProject();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                if (project != null)
-                    file = project.GetConfigFile();
-            }
+                var file = ProjectHelpers.GetSelectedItemPaths().FirstOrDefault();
 
-            if (!string.IsNullOrEmpty(file))
-                CompilerService.Process(file, force: true);
+                if (string.IsNullOrEmpty(file)) // Project
+                {
+                    var project = ProjectHelpers.GetActiveProject();
+
+                    if (project != null)
+                        file = project.GetConfigFile();
+                }
+
+                if (!string.IsNullOrEmpty(file))
+                {
+                    CompilerService.Process(file, force: true);
+                }
+            });
         }
     }
 }

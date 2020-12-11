@@ -4,16 +4,16 @@
   "description": "WebCompiler dependencies",
   "main": "index.js",
   "dependencies": {
-    "autoprefixer": "^9.7.6",
+    "autoprefixer": "^10.1.0",
     "babel": "^6.23.0",
     "handlebars": "^4.7.6",
     "iced-coffee-script": "^108.0.14",
-    "less": "^3.11.1",
+    "less": "^3.12.2",
     "less-plugin-autoprefix": "^2.0.0",
     "less-plugin-csscomb": "^0.0.2",
-    "node-sass": "^4.13.1",
-    "postcss-cli": "^7.1.0",
-    "stylus": "^0.54.7"
+    "node-sass": "^5.0.0",
+    "postcss-cli": "^8.3.0",
+    "stylus": "^0.54.8"
   },
   "devDependencies": {},
   "scripts": {

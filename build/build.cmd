@@ -2,25 +2,15 @@
 
 :: IMPORTANT!! npm 3.x is required to avoid long path exceptions
 
-if exist "%~dp0..\src\WebCompiler\node\node_modules.7z" goto:EOF
+if exist "..\src\WebCompiler\node\node_modules.7z" (
+echo Delete current archive.
+del /Q /Y "..\src\WebCompiler\node\node_modules.7z"
+)
 
-if not exist "%~dp0..\src\WebCompiler\node" md "%~dp0..\src\WebCompiler\node"
-
-pushd "%~dp0..\src\WebCompiler\node"
+if not exist "..\src\WebCompiler\Node" md "..\src\WebCompiler\Node"
 
 echo Installing packages...
-call npm install --quiet ^
-        babel@5.8.34 ^
-        iced-coffee-script ^
-        less ^
-        less-plugin-autoprefix ^
-        less-plugin-csscomb ^
-        node-sass ^
-        postcss-cli ^
-        autoprefixer ^
-        stylus ^
-        handlebars ^
-        > nul
+call npm install
 
 if not exist "node_modules\node-sass\vendor\win32-x64-72" (
     echo Copying node binding...
@@ -29,6 +19,7 @@ if not exist "node_modules\node-sass\vendor\win32-x64-72" (
 )
 
 echo Deleting unneeded files and folders...
+cd node_modules
 del /s /q *.html > nul
 del /s /q *.markdown > nul
 del /s /q *.md > nul
@@ -50,6 +41,7 @@ del /s /q gulpfile.* > nul
 del /s /q makefile.* > nul
 del /s /q README > nul
 
+echo Deleting more stuff...
 for /d /r . %%d in (benchmark)  do @if exist "%%d" rd /s /q "%%d" > nul
 for /d /r . %%d in (bench)      do @if exist "%%d" rd /s /q "%%d" > nul
 for /d /r . %%d in (doc)        do @if exist "%%d" rd /s /q "%%d" > nul
@@ -65,11 +57,12 @@ for /d /r . %%d in (tests)      do @if exist "%%d" rd /s /q "%%d" > nul
 for /d /r . %%d in (testing)    do @if exist "%%d" rd /s /q "%%d" > nul
 for /d /r . %%d in (tst)        do @if exist "%%d" rd /s /q "%%d" > nul
 
-echo Compressing artifacts and cleans up...
-"%~dp07z.exe" a -r -mx9 node_modules.7z node_modules > nul
-rmdir /S /Q node_modules > nul
+cd ..
 
+echo Compressing artifacts and cleans up...
+7z.exe a -r -mx9 node_modules.7z node_modules > nul
+copy node_modules.7z "..\src\WebCompiler\Node"
+rmdir /S /Q node_modules > nul
 
 :done
 echo Done
-pushd "%~dp0"

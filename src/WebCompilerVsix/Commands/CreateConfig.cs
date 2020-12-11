@@ -38,54 +38,64 @@ namespace WebCompilerVsix
 
         private void BeforeQueryStatus(object sender, EventArgs e)
         {
-            var button = (OleMenuCommand)sender;
-            button.Visible = button.Enabled = false;
-
-            _item = GetProjectItem(WebCompilerPackage._dte);
-            _reCompileConfigs.Clear();
-
-            if (_item == null || _item.ContainingProject == null || _item.Properties == null)
-                return;
-
-            string configFile = _item.ContainingProject.GetConfigFile();
-            string inputFile = _item.Properties.Item("FullPath").Value.ToString();
-
-            button.Visible = button.Enabled = WebCompiler.CompilerService.IsSupported(inputFile);
-
-            if (!button.Visible)
-                return;
-
-            var configs = ConfigFileProcessor.IsFileConfigured(configFile, inputFile);
-
-            if (configs != null && configs.Any())
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                button.Text = "Re-compile file";
-                _reCompileConfigs.AddRange(configs);
-            }
-            else
-            {
-                button.Text = "Compile file";
-            }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                var button = (OleMenuCommand) sender;
+                button.Visible = button.Enabled = false;
+
+                _item = GetProjectItem(WebCompilerPackage._dte);
+                _reCompileConfigs.Clear();
+
+                if (_item == null || _item.ContainingProject == null || _item.Properties == null)
+                    return;
+
+                string configFile = _item.ContainingProject.GetConfigFile();
+                string inputFile = _item.Properties.Item("FullPath").Value.ToString();
+
+                button.Visible = button.Enabled = WebCompiler.CompilerService.IsSupported(inputFile);
+
+                if (!button.Visible)
+                    return;
+
+                var configs = ConfigFileProcessor.IsFileConfigured(configFile, inputFile);
+
+                if (configs != null && configs.Any())
+                {
+                    button.Text = "Re-compile file";
+                    _reCompileConfigs.AddRange(configs);
+                }
+                else
+                {
+                    button.Text = "Compile file";
+                }
+            });
         }
 
         public static ProjectItem GetProjectItem(DTE2 dte)
         {
-            Window2 window = dte.ActiveWindow as Window2;
-
-            if (window == null)
-                return null;
-
-            if (window.Type == vsWindowType.vsWindowTypeDocument)
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                Document doc = dte.ActiveDocument;
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                if (doc != null && !string.IsNullOrEmpty(doc.FullName))
+                Window2 window = dte.ActiveWindow as Window2;
+
+                if (window == null)
+                    return null;
+
+                if (window.Type == vsWindowType.vsWindowTypeDocument)
                 {
-                    return dte.Solution.FindProjectItem(doc.FullName);
-                }
-            }
+                    Document doc = dte.ActiveDocument;
 
-            return ProjectHelpers.GetSelectedItems().FirstOrDefault();
+                    if (doc != null && !string.IsNullOrEmpty(doc.FullName))
+                    {
+                        return dte.Solution.FindProjectItem(doc.FullName);
+                    }
+                }
+
+                return ProjectHelpers.GetSelectedItems().FirstOrDefault();
+            });
         }
 
         public static CreateConfig Instance

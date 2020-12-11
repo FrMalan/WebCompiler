@@ -36,29 +36,34 @@ namespace WebCompilerVsix.Commands
 
         private void BeforeQueryStatus(object sender, EventArgs e)
         {
-            var button = (OleMenuCommand)sender;
-            var items = ProjectHelpers.GetSelectedItems();
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            button.Visible = false;
+                var button = (OleMenuCommand) sender;
+                var items = ProjectHelpers.GetSelectedItems();
 
-            if (items.Count() != 1)
-                return;
+                button.Visible = false;
 
-            var item = items.FirstOrDefault();
+                if (items.Count() != 1)
+                    return;
 
-            if (item == null || item.ContainingProject == null || item.Properties == null)
-                return;
+                var item = items.FirstOrDefault();
 
-            var sourceFile = item.Properties.Item("FullPath").Value.ToString();
+                if (item == null || item.ContainingProject == null || item.Properties == null)
+                    return;
 
-            if (!WebCompiler.CompilerService.IsSupported(sourceFile))
-                return;
+                var sourceFile = item.Properties.Item("FullPath").Value.ToString();
 
-            string configFile = item.ContainingProject.GetConfigFile();
+                if (!WebCompiler.CompilerService.IsSupported(sourceFile))
+                    return;
 
-            _configs = ConfigFileProcessor.IsFileConfigured(configFile, sourceFile);
+                string configFile = item.ContainingProject.GetConfigFile();
 
-            button.Visible = _configs != null && _configs.Any();
+                _configs = ConfigFileProcessor.IsFileConfigured(configFile, sourceFile);
+
+                button.Visible = _configs != null && _configs.Any();
+            });
         }
 
         public static RemoveConfig Instance
@@ -82,25 +87,34 @@ namespace WebCompilerVsix.Commands
 
         private void AddConfig(object sender, EventArgs e)
         {
-            var question = MessageBox.Show($"This will remove the file from {Constants.CONFIG_FILENAME}.\r\rDo you want to continue?", Constants.VSIX_NAME, MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
-
-            if (question == DialogResult.Cancel)
-                return;
-
-            ConfigHandler handler = new ConfigHandler();
-
-            try
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                foreach (Config config in _configs)
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                var question =
+                    MessageBox.Show(
+                        $"This will remove the file from {Constants.CONFIG_FILENAME}.\r\rDo you want to continue?",
+                        Constants.VSIX_NAME, MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+
+                if (question == DialogResult.Cancel)
+                    return;
+
+                ConfigHandler handler = new ConfigHandler();
+
+                try
                 {
-                    handler.RemoveConfig(config);
+                    foreach (Config config in _configs)
+                    {
+                        handler.RemoveConfig(config);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex);
-                WebCompilerPackage._dte.StatusBar.Text = $"Could not update {Constants.CONFIG_FILENAME}. Make sure it's not write-protected or has syntax errors.";
-            }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex);
+                    WebCompilerPackage._dte.StatusBar.Text =
+                        $"Could not update {Constants.CONFIG_FILENAME}. Make sure it's not write-protected or has syntax errors.";
+                }
+            });
         }
     }
 }

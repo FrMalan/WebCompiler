@@ -46,78 +46,95 @@ namespace WebCompilerVsix
 
         private static void ConfigProcessed(object sender, ConfigProcessedEventArgs e)
         {
-            if (e.AmountProcessed > 0)
-                _dte.StatusBar.Progress(true, $"Compiling \"{e.Config.InputFile}\"", e.AmountProcessed, e.Total);
-            else
-                _dte.StatusBar.Progress(true, "Compiling...", e.AmountProcessed, e.Total);
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                if (e.AmountProcessed > 0)
+                    _dte.StatusBar.Progress(true, $"Compiling \"{e.Config.InputFile}\"", e.AmountProcessed, e.Total);
+                else
+                    _dte.StatusBar.Progress(true, "Compiling...", e.AmountProcessed, e.Total);
+            });
         }
 
         public static void Process(string configFile, IEnumerable<Config> configs = null, bool force = false)
         {
-            ThreadPool.QueueUserWorkItem((o) =>
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                try
-                {
-                    var result = Processor.Process(configFile, configs, force);
-                    ErrorListService.ProcessCompilerResults(result);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    if (!result.Any(c => c.HasErrors))
+                ThreadPool.QueueUserWorkItem((o) =>
+                {
+                    try
                     {
-                        WebCompilerInitPackage.StatusText("Done compiling");
-                    }
-                }
-                catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
-                {
-                    string message = $"{Constants.VSIX_NAME} found an error in {Constants.CONFIG_FILENAME}";
-                    Logger.Log(message);
-                    WebCompilerInitPackage.StatusText(message);
-                    _dte.StatusBar.Progress(false);
+                        var result = Processor.Process(configFile, configs, force);
+                        ErrorListService.ProcessCompilerResults(result);
 
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(ex);
-                    ShowError(configFile);
-                    _dte.StatusBar.Progress(false);
-                    WebCompilerInitPackage.StatusText($"{Constants.VSIX_NAME} couldn't compile successfully");
-                }
-                finally
-                {
-                    _dte.StatusBar.Progress(false);
-                }
+                        if (!result.Any(c => c.HasErrors))
+                        {
+                            WebCompilerInitPackage.StatusText("Done compiling");
+                        }
+                    }
+                    catch (Exception ex) when (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+                    {
+                        string message = $"{Constants.VSIX_NAME} found an error in {Constants.CONFIG_FILENAME}";
+                        Logger.Log(message);
+                        WebCompilerInitPackage.StatusText(message);
+                        _dte.StatusBar.Progress(false);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ex);
+                        ShowError(configFile);
+                        _dte.StatusBar.Progress(false);
+                        WebCompilerInitPackage.StatusText($"{Constants.VSIX_NAME} couldn't compile successfully");
+                    }
+                    finally
+                    {
+                        _dte.StatusBar.Progress(false);
+                    }
+                });
             });
         }
 
         public static void SourceFileChanged(string configFile, string sourceFile)
         {
-            ThreadPool.QueueUserWorkItem((o) =>
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                try
-                {
-                    WebCompilerInitPackage.StatusText($"Compiling...");
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                    var activeProject = ProjectHelpers.GetActiveProject();
-                    var projectRoot = ProjectHelpers.GetRootFolder(activeProject);
+                ThreadPool.QueueUserWorkItem((o) =>
+                {
+                    try
+                    {
+                        WebCompilerInitPackage.StatusText($"Compiling...");
 
-                    var result = Processor.SourceFileChanged(configFile, sourceFile, projectRoot);
-                    ErrorListService.ProcessCompilerResults(result);
-                }
-                catch (FileNotFoundException ex)
-                {
-                    Logger.Log($"{Constants.VSIX_NAME} could not find \"{ex.FileName}\"");
-                    WebCompilerInitPackage.StatusText($"{Constants.VSIX_NAME} could not find \"{ex.FileName}\"");
-                }
-                catch (IOException ex)
-                {
-                    Logger.Log(ex);
-                    ShowException(ex.Message ?? "IOException: Something strange happened. Wait for 1.25 seconds and try again.");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(ex);
-                    ShowException(ex.Message ?? "Exception: Something very strange happened. Wait for 2.57 seconds and try again.");
-                    //ShowError(configFile);
-                }
+                        var activeProject = ProjectHelpers.GetActiveProject();
+                        var projectRoot = ProjectHelpers.GetRootFolder(activeProject);
+
+                        var result = Processor.SourceFileChanged(configFile, sourceFile, projectRoot);
+                        ErrorListService.ProcessCompilerResults(result);
+                    }
+                    catch (FileNotFoundException ex)
+                    {
+                        Logger.Log($"{Constants.VSIX_NAME} could not find \"{ex.FileName}\"");
+                        WebCompilerInitPackage.StatusText($"{Constants.VSIX_NAME} could not find \"{ex.FileName}\"");
+                    }
+                    catch (IOException ex)
+                    {
+                        Logger.Log(ex);
+                        ShowException(ex.Message ??
+                                      "IOException: Something strange happened. Wait for 1.25 seconds and try again.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(ex);
+                        ShowException(ex.Message ??
+                                      "Exception: Something very strange happened. Wait for 2.57 seconds and try again.");
+                        //ShowError(configFile);
+                    }
+                });
             });
         }
 
@@ -138,36 +155,40 @@ namespace WebCompilerVsix
 
         private static void AfterProcess(object sender, CompileFileEventArgs e)
         {
-            if (!e.Config.IncludeInProject || !e.ContainsChanges)
-                return;
-
-            var item = _dte.Solution.FindProjectItem(e.Config.FileName);
-
-            if (item == null || item.ContainingProject == null)
-                return;
-
-            FileInfo input = e.Config.GetAbsoluteInputFile();
-            FileInfo output = e.Config.GetAbsoluteOutputFile();
-
-            string inputWithOutputExtension = Path.ChangeExtension(input.FullName, output.Extension);
-
-            if (output.Name.EndsWith(".es5.js"))
-                inputWithOutputExtension = Path.ChangeExtension(inputWithOutputExtension, ".es5.js");
-
-            if (inputWithOutputExtension.Equals(output.FullName, StringComparison.OrdinalIgnoreCase))
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                ThreadHelper.ThrowIfNotOnUIThread();
-                var inputItem = _dte.Solution.FindProjectItem(input.FullName);
-                var outputItem = _dte.Solution.FindProjectItem(output.FullName);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                // Only add output file to project if it isn't already
-                if (inputItem != null && outputItem == null)
-                    ProjectHelpers.AddNestedFile(input.FullName, output.FullName);
-            }
-            else
-            {
-                item.ContainingProject.AddFileToProject(e.Config.GetAbsoluteOutputFile().FullName);
-            }
+                if (!e.Config.IncludeInProject || !e.ContainsChanges)
+                    return;
+
+                var item = _dte.Solution.FindProjectItem(e.Config.FileName);
+
+                if (item == null || item.ContainingProject == null)
+                    return;
+
+                FileInfo input = e.Config.GetAbsoluteInputFile();
+                FileInfo output = e.Config.GetAbsoluteOutputFile();
+
+                string inputWithOutputExtension = Path.ChangeExtension(input.FullName, output.Extension);
+
+                if (output.Name.EndsWith(".es5.js"))
+                    inputWithOutputExtension = Path.ChangeExtension(inputWithOutputExtension, ".es5.js");
+
+                if (inputWithOutputExtension.Equals(output.FullName, StringComparison.OrdinalIgnoreCase))
+                {
+                    var inputItem = _dte.Solution.FindProjectItem(input.FullName);
+                    var outputItem = _dte.Solution.FindProjectItem(output.FullName);
+
+                    // Only add output file to project if it isn't already
+                    if (inputItem != null && outputItem == null)
+                        ProjectHelpers.AddNestedFile(input.FullName, output.FullName);
+                }
+                else
+                {
+                    item.ContainingProject.AddFileToProject(e.Config.GetAbsoluteOutputFile().FullName);
+                }
+            });
         }
     }
 }

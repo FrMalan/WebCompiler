@@ -4,6 +4,7 @@ using System.Threading;
 using System.Windows.Threading;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using WebCompilerVsix.Commands;
@@ -19,7 +20,7 @@ namespace WebCompilerVsix
     [ProvideAutoLoad(UIContextGuids80.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class WebCompilerPackage : AsyncPackage
     {
-        public const string Version = "1.4.203";
+        public const string Version = "2.1.101";
         public static DTE2 _dte;
         public static Package Package;
         private SolutionEvents _solutionEvents;
@@ -81,13 +82,17 @@ namespace WebCompilerVsix
         public static Dispatcher _dispatcher;
         public static DTE2 _dte;
 
-        protected override async System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Critical Code Smell", "S2696:Instance members should not write to \"static\" fields", Justification = "Initialize method called once")]
+        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync();
 
             _dispatcher = Dispatcher.CurrentDispatcher;
-            _dte = GetService(typeof(DTE)) as DTE2;
+            Assumes.Present(_dispatcher);
 
+            _dte = await GetServiceAsync(typeof(DTE)) as DTE2;
+            Assumes.Present(_dte);
+            
             WebCompiler.CompilerService.Initializing += (s, e) => { StatusText("Installing updated versions of the web compilers..."); };
             WebCompiler.CompilerService.Initialized += (s, e) => { StatusText("Done installing the web compilers"); };
 

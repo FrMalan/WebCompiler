@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 
 namespace WebCompilerVsix
 {
@@ -24,14 +25,19 @@ namespace WebCompilerVsix
 
         public static void CheckFileOutOfSourceControl(string file)
         {
-            if (!File.Exists(file) || _dte.Solution.FindProjectItem(file) == null)
-                return;
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            if (_dte.SourceControl.IsItemUnderSCC(file) && !_dte.SourceControl.IsItemCheckedOut(file))
-                _dte.SourceControl.CheckOutItem(file);
+                if (!File.Exists(file) || _dte.Solution.FindProjectItem(file) == null)
+                    return;
 
-            FileInfo info = new FileInfo(file);
-            info.IsReadOnly = false;
+                if (_dte.SourceControl.IsItemUnderSCC(file) && !_dte.SourceControl.IsItemCheckedOut(file))
+                    _dte.SourceControl.CheckOutItem(file);
+
+                FileInfo info = new FileInfo(file);
+                info.IsReadOnly = false;
+            });
         }
 
         public static IEnumerable<ProjectItem> GetSelectedItems()
@@ -49,48 +55,56 @@ namespace WebCompilerVsix
 
         public static IEnumerable<string> GetSelectedItemPaths()
         {
-            foreach (ProjectItem item in GetSelectedItems())
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                if (item != null && item.Properties != null)
-                    yield return item.Properties.Item("FullPath").Value.ToString();
-            }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                return from item in GetSelectedItems()
+                    where item?.Properties != null
+                    select item.Properties.Item("FullPath").Value.ToString();
+            });
         }
 
         public static string GetRootFolder(this Project project)
         {
-            if (project == null || string.IsNullOrEmpty(project.FullName))
-                return null;
-
-            string fullPath;
-
-            try
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                fullPath = project.Properties.Item("FullPath").Value as string;
-            }
-            catch (ArgumentException)
-            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                if (project == null || string.IsNullOrEmpty(project.FullName))
+                    return null;
+
+                string fullPath;
+
                 try
                 {
-                    // MFC projects don't have FullPath, and there seems to be no way to query existence
-                    fullPath = project.Properties.Item("ProjectDirectory").Value as string;
+                    fullPath = project.Properties.Item("FullPath").Value as string;
                 }
                 catch (ArgumentException)
                 {
-                    // Installer projects have a ProjectPath.
-                    fullPath = project.Properties.Item("ProjectPath").Value as string;
+                    try
+                    {
+                        // MFC projects don't have FullPath, and there seems to be no way to query existence
+                        fullPath = project.Properties.Item("ProjectDirectory").Value as string;
+                    }
+                    catch (ArgumentException)
+                    {
+                        // Installer projects have a ProjectPath.
+                        fullPath = project.Properties.Item("ProjectPath").Value as string;
+                    }
                 }
-            }
 
-            if (string.IsNullOrEmpty(fullPath))
-                return File.Exists(project.FullName) ? Path.GetDirectoryName(project.FullName) : null;
+                if (string.IsNullOrEmpty(fullPath))
+                    return File.Exists(project.FullName) ? Path.GetDirectoryName(project.FullName) : null;
 
-            if (Directory.Exists(fullPath))
-                return fullPath;
+                if (Directory.Exists(fullPath))
+                    return fullPath;
 
-            if (File.Exists(fullPath))
-                return Path.GetDirectoryName(fullPath);
+                if (File.Exists(fullPath))
+                    return Path.GetDirectoryName(fullPath);
 
-            return null;
+                return null;
+            });
         }
 
         public static void AddFileToProject(this Project project, string file, string itemType = null)
@@ -127,145 +141,190 @@ namespace WebCompilerVsix
 
         public static void AddNestedFile(string parentFile, string newFile, string itemType = null)
         {
-            ProjectItem item = _dte.Solution.FindProjectItem(parentFile);
-
-            try
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                if (item == null
-                    || item.ContainingProject == null
-                    || item.ContainingProject.IsKind(ProjectTypes.ASPNET_5))
-                    return;
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                if (item.ProjectItems == null || item.ContainingProject.IsKind(ProjectTypes.UNIVERSAL_APP))
-                {
-                    item.ContainingProject.AddFileToProject(newFile);
-                }
-                else if (_dte.Solution.FindProjectItem(newFile) == null)
-                {
-                    item.ProjectItems.AddFromFile(newFile);
-                }
+                ProjectItem item = _dte.Solution.FindProjectItem(parentFile);
 
-                ProjectItem newItem = _dte.Solution.FindProjectItem(newFile);
-                newItem.SetItemType(itemType);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex);
-            }
+                try
+                {
+                    if (item == null
+                        || item.ContainingProject == null
+                        || item.ContainingProject.IsKind(ProjectTypes.ASPNET_5))
+                        return;
+
+                    if (item.ProjectItems == null || item.ContainingProject.IsKind(ProjectTypes.UNIVERSAL_APP))
+                    {
+                        item.ContainingProject.AddFileToProject(newFile);
+                    }
+                    else if (_dte.Solution.FindProjectItem(newFile) == null)
+                    {
+                        item.ProjectItems.AddFromFile(newFile);
+                    }
+
+                    ProjectItem newItem = _dte.Solution.FindProjectItem(newFile);
+                    newItem.SetItemType(itemType);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex);
+                }
+            });
         }
 
         public static bool IsKind(this Project project, params string[] kindGuids)
         {
-            foreach (var guid in kindGuids)
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                if (project.Kind.Equals(guid, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            return false;
+                foreach (var guid in kindGuids)
+                {
+                    if (project.Kind.Equals(guid, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+
+                return false;
+            });
         }
 
         public static void DeleteFileFromProject(string file)
         {
-            ProjectItem item = _dte.Solution.FindProjectItem(file);
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            if (item == null)
-                return;
-            try
-            {
-                item.Delete();
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex);
-            }
+                ProjectItem item = _dte.Solution.FindProjectItem(file);
+
+                if (item == null)
+                    return;
+                try
+                {
+                    item.Delete();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex);
+                }
+            });
         }
 
         public static IEnumerable<Project> GetAllProjects()
         {
-            return _dte.Solution.Projects
-                  .Cast<Project>()
-                  .SelectMany(GetChildProjects)
-                  .Union(_dte.Solution.Projects.Cast<Project>())
-                  .Where(p => { try { return !string.IsNullOrEmpty(p.FullName); } catch { return false; } });
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                return _dte.Solution.Projects
+                    .Cast<Project>()
+                    .SelectMany(GetChildProjects)
+                    .Union(_dte.Solution.Projects.Cast<Project>())
+                    .Where(p =>
+                    {
+                        try
+                        {
+                            return !string.IsNullOrEmpty(p.FullName);
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    });
+            });
         }
 
         private static IEnumerable<Project> GetChildProjects(Project parent)
         {
-            try
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                if (!parent.IsKind(EnvDteProjectKinds.vsProjectKindSolutionFolder) && parent.Collection == null)  // Unloaded
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                try
+                {
+                    if (!parent.IsKind(EnvDteProjectKinds.vsProjectKindSolutionFolder) &&
+                        parent.Collection == null) // Unloaded
+                        return Enumerable.Empty<Project>();
+
+                    if (!string.IsNullOrEmpty(parent.FullName))
+                        return new[] { parent };
+                }
+                catch (COMException)
+                {
                     return Enumerable.Empty<Project>();
+                }
 
-                if (!string.IsNullOrEmpty(parent.FullName))
-                    return new[] { parent };
-            }
-            catch (COMException)
-            {
-                return Enumerable.Empty<Project>();
-            }
-
-            return parent.ProjectItems
+                return parent.ProjectItems
                     .Cast<ProjectItem>()
                     .Where(p => p.SubProject != null)
                     .SelectMany(p => GetChildProjects(p.SubProject));
+            });
         }
 
         public static bool IsSolutionLoaded()
         {
-            if (_dte.Solution == null)
-                return false;
-            
-            return GetAllProjects().Any();
+            return _dte.Solution != null && GetAllProjects().Any();
         }
 
         public static Project GetActiveProject()
         {
-            try
+            ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                Window2 window = _dte.ActiveWindow as Window2;
-                Document doc = _dte.ActiveDocument;
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                if (window != null && window.Type == vsWindowType.vsWindowTypeDocument)
+                try
                 {
-                    // if a document is active, use the document's containing directory
+                    var window = _dte.ActiveWindow as Window2;
+                    var doc = _dte.ActiveDocument;
+
+                    if (window != null && window.Type == vsWindowType.vsWindowTypeDocument)
+                    {
+                        // if a document is active, use the document's containing directory
+                        if (doc != null && !string.IsNullOrEmpty(doc.FullName))
+                        {
+                            ProjectItem docItem = _dte.Solution.FindProjectItem(doc.FullName);
+
+                            if (docItem != null && docItem.ContainingProject != null)
+                                return docItem.ContainingProject;
+                        }
+                    }
+
+                    if (_dte.ActiveSolutionProjects is Array activeSolutionProjects && activeSolutionProjects.Length > 0)
+                        return activeSolutionProjects.GetValue(0) as Project;
+
                     if (doc != null && !string.IsNullOrEmpty(doc.FullName))
                     {
-                        ProjectItem docItem = _dte.Solution.FindProjectItem(doc.FullName);
+                        var item = _dte.Solution?.FindProjectItem(doc.FullName);
 
-                        if (docItem != null && docItem.ContainingProject != null)
-                            return docItem.ContainingProject;
+                        if (item != null)
+                            return item.ContainingProject;
                     }
                 }
-
-                Array activeSolutionProjects = _dte.ActiveSolutionProjects as Array;
-
-                if (activeSolutionProjects != null && activeSolutionProjects.Length > 0)
-                    return activeSolutionProjects.GetValue(0) as Project;
-
-                if (doc != null && !string.IsNullOrEmpty(doc.FullName))
+                catch (Exception ex)
                 {
-                    var item = _dte.Solution?.FindProjectItem(doc.FullName);
-
-                    if (item != null)
-                        return item.ContainingProject;
+                    Logger.Log("Error getting the active project" + ex);
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log("Error getting the active project" + ex);
-            }
+
+                return null;
+            });
 
             return null;
         }
 
         public static bool IsConfigFile(this ProjectItem item)
         {
-            if (item == null || item.Properties == null || item.ContainingProject == null)
-                return false;
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            var sourceFile = item.Properties.Item("FullPath").Value.ToString();
-            return Path.GetFileName(sourceFile).Equals(Constants.CONFIG_FILENAME, StringComparison.OrdinalIgnoreCase);
+                if (item == null || item.Properties == null || item.ContainingProject == null)
+                    return false;
+
+                var sourceFile = item.Properties.Item("FullPath").Value.ToString();
+
+                return Path.GetFileName(sourceFile)
+                    .Equals(Constants.CONFIG_FILENAME, StringComparison.OrdinalIgnoreCase);
+            });
         }
     }
 

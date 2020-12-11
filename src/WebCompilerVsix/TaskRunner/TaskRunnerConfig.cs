@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Windows.Media;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TaskRunnerExplorer;
 
@@ -47,41 +48,46 @@ namespace WebCompilerVsix
 
         public bool SaveBindings(string configPath, string bindingsXml)
         {
-            string bindingPath = configPath + ".bindings";
-
-            try
+            return ThreadHelper.JoinableTaskFactory.Run(async delegate
             {
-                ProjectHelpers.CheckFileOutOfSourceControl(bindingPath);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                if (bindingsXml == "<binding />" && File.Exists(bindingPath))
-                {
-                    ProjectHelpers.DeleteFileFromProject(bindingPath);
-                }
-                else
-                {
-                    File.WriteAllText(bindingPath, "///" + bindingsXml, Encoding.UTF8);
-                    ProjectHelpers.AddNestedFile(configPath, bindingPath);
-                }
+                string bindingPath = configPath + ".bindings";
 
-                IVsPersistDocData persistDocData;
-                if (!WebCompilerPackage.IsDocumentDirty(configPath, out persistDocData) && persistDocData != null)
+                try
                 {
-                    int cancelled;
-                    string newName;
-                    persistDocData.SaveDocData(VSSAVEFLAGS.VSSAVE_SilentSave, out newName, out cancelled);
-                }
-                else if(persistDocData == null)
-                {
-                    new FileInfo(configPath).LastWriteTime = DateTime.Now;
-                }
+                    ProjectHelpers.CheckFileOutOfSourceControl(bindingPath);
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(ex);
-                return false;
-            }
+                    if (bindingsXml == "<binding />" && File.Exists(bindingPath))
+                    {
+                        ProjectHelpers.DeleteFileFromProject(bindingPath);
+                    }
+                    else
+                    {
+                        File.WriteAllText(bindingPath, "///" + bindingsXml, Encoding.UTF8);
+                        ProjectHelpers.AddNestedFile(configPath, bindingPath);
+                    }
+
+                    IVsPersistDocData persistDocData;
+                    if (!WebCompilerPackage.IsDocumentDirty(configPath, out persistDocData) && persistDocData != null)
+                    {
+                        int cancelled;
+                        string newName;
+                        persistDocData.SaveDocData(VSSAVEFLAGS.VSSAVE_SilentSave, out newName, out cancelled);
+                    }
+                    else if (persistDocData == null)
+                    {
+                        new FileInfo(configPath).LastWriteTime = DateTime.Now;
+                    }
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(ex);
+                    return false;
+                }
+            });
         }
     }
 }
