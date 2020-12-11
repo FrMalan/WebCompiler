@@ -6,9 +6,8 @@ echo Build folder for node_module preparation:
 echo %~dp0
 
 if exist "%~dp0..\src\WebCompiler\node\node_modules.7z" (
-echo Delete current archive.
-del /Q "%~dp0..\src\WebCompiler\node\node_modules.7z"
-del /Q "%~dp0..\src\WebCompiler\node\node.7z"
+echo src\WebCompiler\node\node_modules.7z already exists. Manually remove to regenerate.
+exit
 )
 
 if not exist "%~dp0..\src\WebCompiler\Node" md "..\src\WebCompiler\Node"
@@ -17,6 +16,7 @@ pushd
 
 cd %~dp0
 
+REM Only update node-sass in package.json if you are running update NodeJS version. See https://www.npmjs.com/package/node-sass
 echo Installing npm packages...
 call npm install
 
@@ -69,8 +69,6 @@ cd ..
 
 echo Compressing node_modules...
 7z.exe a -r -mx9 node_modules.7z node_modules > nul
-echo Compressing node.exe...
-7z.exe a -mx9 node.7z node.exe > nul
 echo Copy files...
 copy %~dp0node_modules.7z "..\src\WebCompiler\Node"
 copy %~dp0node.7z "..\src\WebCompiler\Node"

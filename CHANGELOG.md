@@ -1,18 +1,16 @@
-# Roadmap
-
-- [ ] Generate gulpfile.js from compilerconfig.json (#34)
-- [ ] Preview window (#6)
-- [ ] File globbing pattern support (#49)
-- [ ] Run compilers from a node server
-
-Features that have a checkmark are complete and available for
-download in the
-[nightly build](http://vsixgallery.com/extension/81580087-ff77-44c0-8342-b8a937a85aff/).
-
 # Changelog
 
 These are the changes to each version that has been released
 on the official Visual Studio extension gallery.
+
+## 2.1.101
+
+**2020-12-11**
+
+- [x] Upgraded to Visual Studio 2019 latest SDK
+- [x] Dropped .net 4.6 added .net 4.72, 4.8 netcoreapp3.1 and .net5.0
+- [x] Fixed some main thread issues when saving files (still WIP)
+- [x] New BuildWebCompiler.Out nuget with some fixes for Ci builds
 
 ## 1.11
 

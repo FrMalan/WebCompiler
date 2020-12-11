@@ -3,7 +3,7 @@
     <Metadata>
         <Identity Id="81580087-ff77-44c0-8342-b8a937a85aff" Version="2.1.101" Language="en-US" Publisher="Francois Malan" />
         <DisplayName>Web Compiler</DisplayName>
-        <Description xml:space="preserve">The easiest and most powerful way to compile LESS, Scss, Stylus, JSX, CoffeeScript and Handlebars files directly within Visual Studio or through MSBuild.</Description>
+        <Description xml:space="preserve">The easiest and most powerful way to compile LESS, Scss, Stylus, JSX, CoffeeScript and Handlebars files directly within Visual Studio or through MSBuild. Requires NodeJS 14.x</Description>
         <MoreInfo>https://github.com/FrMalan/WebCompiler</MoreInfo>
         <License>Resources\LICENSE</License>
         <ReleaseNotes>https://github.com/FrMalan/WebCompiler/blob/master/CHANGELOG.md</ReleaseNotes>
