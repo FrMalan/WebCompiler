@@ -20,12 +20,6 @@ REM Only update node-sass in package.json if you are running update NodeJS versi
 echo Installing npm packages...
 call npm install
 
-if not exist "%~dp0node_modules\node-sass\vendor\win32-x64-72" (
-    echo Copying node binding...
-    md "%~dp0node_modules\node-sass\vendor\win32-x64-72"
-    copy binding.node "%~dp0node_modules\node-sass\vendor\win32-x64-72"
-)
-
 echo Deleting unneeded files and folders...
 cd node_modules
 del /s /q *.html > nul
