@@ -2,20 +2,28 @@
 
 :: IMPORTANT!! npm 3.x is required to avoid long path exceptions
 
-if exist "..\src\WebCompiler\node\node_modules.7z" (
+echo Build folder for node_module preparation:
+echo %~dp0
+
+if exist "%~dp0..\src\WebCompiler\node\node_modules.7z" (
 echo Delete current archive.
-del /Q /Y "..\src\WebCompiler\node\node_modules.7z"
+del /Q "%~dp0..\src\WebCompiler\node\node_modules.7z"
+del /Q "%~dp0..\src\WebCompiler\node\node.7z"
 )
 
-if not exist "..\src\WebCompiler\Node" md "..\src\WebCompiler\Node"
+if not exist "%~dp0..\src\WebCompiler\Node" md "..\src\WebCompiler\Node"
 
-echo Installing packages...
+pushd
+
+cd %~dp0
+
+echo Installing npm packages...
 call npm install
 
-if not exist "node_modules\node-sass\vendor\win32-x64-72" (
+if not exist "%~dp0node_modules\node-sass\vendor\win32-x64-72" (
     echo Copying node binding...
-    md "node_modules\node-sass\vendor\win32-x64-72"
-    copy binding.node "node_modules\node-sass\vendor\win32-x64-72"
+    md "%~dp0node_modules\node-sass\vendor\win32-x64-72"
+    copy binding.node "%~dp0node_modules\node-sass\vendor\win32-x64-72"
 )
 
 echo Deleting unneeded files and folders...
@@ -62,12 +70,13 @@ cd ..
 echo Compressing node_modules...
 7z.exe a -r -mx9 node_modules.7z node_modules > nul
 echo Compressing node.exe...
-7z.exe a -mx9 node.7z node.exe > null
+7z.exe a -mx9 node.7z node.exe > nul
 echo Copy files...
-copy node_modules.7z "..\src\WebCompiler\Node"
-copy node.7z "..\src\WebCompiler\Node"
+copy %~dp0node_modules.7z "..\src\WebCompiler\Node"
+copy %~dp0node.7z "..\src\WebCompiler\Node"
 echo Clean up...
 rmdir /S /Q node_modules > nul
 
 :done
+popd
 echo Done

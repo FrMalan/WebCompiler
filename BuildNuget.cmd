@@ -8,15 +8,13 @@ cd "%~dp0"
 pushd
 
 echo [Delete bin, obj folders]
-for /f %%i in ('dir /a:d /b src\*') do call :shownomercy src\%%i
+for /f %%i in ('dir /a:d /b src\WebCompiler\*') do call :shownomercy src\%%i
 
 popd
 
 :build
-nuget restore
 dotnet restore src\WebCompiler\
-dotnet build -c Release .\src\WebCompiler\WebCompiler.csproj
-"msbuild.exe" .\src\WebCompilerVsix\WebCompilerVsix.csproj /p:configuration=Release /p:DeployExtension=false /p:ZipPackageCompressionLevel=normal /v:m
+dotnet pack -c Release .\src\WebCompiler\WebCompiler.csproj
 
 goto :EOF
 
