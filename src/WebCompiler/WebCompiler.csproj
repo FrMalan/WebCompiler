@@ -13,7 +13,7 @@
     <!-- forces SDK to copy dependencies into build output to make packing easier -->
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Authors>Mads Kristensen, Francois Malan</Authors>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <VersionPrefix>2.1.101</VersionPrefix>
     <VersionSuffix></VersionSuffix>
   </PropertyGroup>
