@@ -28,14 +28,14 @@ namespace WebCompiler
                 return true;
             }
 
-            Log.LogMessage(MessageImportance.High, Environment.NewLine + "WebCompiler: Begin cleaning output of " + configFile.Name);
+            Log.LogMessage(MessageImportance.High, Environment.NewLine + "WebCompiler:=> Begin cleaning output of " + configFile.Name);
 
             try
             {
                 var processor = new ConfigFileProcessor();
                 processor.DeleteOutputFiles(configFile.FullName);
 
-                Log.LogMessage(MessageImportance.High, "WebCompiler: Done cleaning output of " + configFile.Name);
+                Log.LogMessage(MessageImportance.High, "WebCompiler:=> Done cleaning output of " + configFile.Name);
 
                 return true;
             }

@@ -28,7 +28,7 @@ namespace WebCompiler
                 return true;
             }
 
-            Log.LogMessage(MessageImportance.High, Environment.NewLine + "WebCompiler: Begin compiling " + configFile.Name);
+            Log.LogMessage(MessageImportance.High, Environment.NewLine + "WebCompiler:=> Begin compiling " + configFile.Name);
 
             ConfigFileProcessor processor = new ConfigFileProcessor();
             processor.BeforeProcess += (s, e) => { if (e.ContainsChanges) FileHelpers.RemoveReadonlyFlagFromFile(e.Config.GetAbsoluteOutputFile()); };
@@ -41,7 +41,7 @@ namespace WebCompiler
             FileMinifier.BeforeWritingGzipFile += (s, e) => { if (e.ContainsChanges) FileHelpers.RemoveReadonlyFlagFromFile(e.ResultFile); };
             FileMinifier.AfterWritingGzipFile += FileMinifier_AfterWritingGzipFile;
 
-            CompilerService.Initializing += (s, e) => { Log.LogMessage(MessageImportance.High, "WebCompiler installing updated versions of the compilers..."); };
+            CompilerService.Initializing += (s, e) => { Log.LogMessage(MessageImportance.High, "WebCompiler:=> installing updated versions of the compilers..."); };
 
             try
             {
@@ -61,7 +61,7 @@ namespace WebCompiler
                     }
                 }
 
-                Log.LogMessage(MessageImportance.High, "WebCompiler: Done compiling " + configFile.Name);
+                Log.LogMessage(MessageImportance.High, "WebCompiler:=> Done compiling " + configFile.Name);
                 return isSuccessful;
             }
             catch (Exception ex)
