@@ -7,7 +7,7 @@
 
 Features that have a checkmark are complete and available for
 download in the
-[nightly build](http://vsixgallery.com/extension/148ffa77-d70a-407f-892b-9ee542346862/).
+[nightly build](http://vsixgallery.com/extension/81580087-ff77-44c0-8342-b8a937a85aff/).
 
 # Changelog
 
